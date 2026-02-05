@@ -1,0 +1,19 @@
+{
+    "title": "Multi-modal volumetric concept activation to explain detection and classification of metastatic prostate cancer on PSMA-PET/CT",
+    "authors": [
+        "Rosa C. J. Kraaijveld",
+        "Marielle E. P. Philippens",
+        "Wietse S. C. Eppinga",
+        "Ina M. J\u00fcrgenliemk-Schulz",
+        "Kenneth G. A. Gilhuijs",
+        "Petra S. Kroon",
+        "Bas H. M. van der Velden"
+    ],
+    "summary": "Explainable artificial intelligence (XAI) is increasingly used to analyze the behavior of neural networks. Concept activation uses human-interpretable concepts to explain neural network behavior. This study aimed at assessing the feasibility of regression concept activation to explain detection and classification of multi-modal volumetric data.\n  Proof-of-concept was demonstrated in metastatic prostate cancer patients imaged with positron emission tomography/computed tomography (PET/CT). Multi-modal volumetric concept activation was used to provide global and local explanations.\n  Sensitivity was 80% at 1.78 false positive per patient. Global explanations showed that detection focused on CT for anatomical location and on PET for its confidence in the detection. Local explanations showed promise to aid in distinguishing true positives from false positives. Hence, this study demonstrated feasibility to explain detection and classification of multi-modal volumetric data using regression concept activation.",
+    "published": "2022-08-04T09:54:34Z",
+    "pdf_url": "https://arxiv.org/pdf/2208.02555v1",
+    "arxiv_id": "2208.02555v1",
+    "link": "https://arxiv.org/abs/2208.02555v1",
+    "categories": "eess.IV",
+    "local_pdf": "./data\\papers\\Multi-modal_volumetric_concept_activation_to_explain_detection_and_classificatio.pdf"
+}

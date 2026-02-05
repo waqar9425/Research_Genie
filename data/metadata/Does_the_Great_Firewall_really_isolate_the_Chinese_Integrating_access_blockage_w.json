@@ -1,0 +1,14 @@
+{
+    "title": "Does the Great Firewall really isolate the Chinese? Integrating access blockage with cultural factors to explain web user behavior",
+    "authors": [
+        "Harsh Taneja",
+        "Angela Xiao Wu"
+    ],
+    "summary": "The dominant understanding of Internet censorship posits that blocking access to foreign-based websites creates isolated communities of Internet users. We question this discourse for its assumption that if given access people would use all websites. We develop a conceptual framework that integrates access blockage with social structures to explain web users' choices, and argue that users visit websites they find culturally proximate and access blockage matters only when such sites are blocked. We examine the case of China, where online blockage is notoriously comprehensive, and compare Chinese web usage patterns with those elsewhere. Analyzing audience traffic among the 1000 most visited websites, we find that websites cluster according to language and geography. Chinese websites constitute one cluster, which resembles other such geo-linguistic clusters in terms of both its composition and degree of isolation. Our sociological investigation reveals a greater role of cultural proximity than access blockage in explaining online behaviors.",
+    "published": "2013-05-14T22:00:52Z",
+    "pdf_url": "https://arxiv.org/pdf/1305.3311v5",
+    "arxiv_id": "1305.3311v5",
+    "link": "https://arxiv.org/abs/1305.3311v5",
+    "categories": "cs.CY",
+    "local_pdf": "./data\\papers\\Does_the_Great_Firewall_really_isolate_the_Chinese_Integrating_access_blockage_w.pdf"
+}

@@ -1,0 +1,17 @@
+{
+    "title": "Joint Music and Language Attention Models for Zero-shot Music Tagging",
+    "authors": [
+        "Xingjian Du",
+        "Zhesong Yu",
+        "Jiaju Lin",
+        "Bilei Zhu",
+        "Qiuqiang Kong"
+    ],
+    "summary": "Music tagging is a task to predict the tags of music recordings. However, previous music tagging research primarily focuses on close-set music tagging tasks which can not be generalized to new tags. In this work, we propose a zero-shot music tagging system modeled by a joint music and language attention (JMLA) model to address the open-set music tagging problem. The JMLA model consists of an audio encoder modeled by a pretrained masked autoencoder and a decoder modeled by a Falcon7B. We introduce preceiver resampler to convert arbitrary length audio into fixed length embeddings. We introduce dense attention connections between encoder and decoder layers to improve the information flow between the encoder and decoder layers. We collect a large-scale music and description dataset from the internet. We propose to use ChatGPT to convert the raw descriptions into formalized and diverse descriptions to train the JMLA models. Our proposed JMLA system achieves a zero-shot audio tagging accuracy of $ 64.82\\% $ on the GTZAN dataset, outperforming previous zero-shot systems and achieves comparable results to previous systems on the FMA and the MagnaTagATune datasets.",
+    "published": "2023-10-16T08:00:16Z",
+    "pdf_url": "https://arxiv.org/pdf/2310.10159v1",
+    "arxiv_id": "2310.10159v1",
+    "link": "https://arxiv.org/abs/2310.10159v1",
+    "categories": "cs.SD",
+    "local_pdf": "./data\\papers\\Joint_Music_and_Language_Attention_Models_for_Zero-shot_Music_Tagging.pdf"
+}

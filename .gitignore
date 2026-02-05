@@ -1,0 +1,9 @@
+__pycache__/
+.env
+.venv
+# Ignore all Jupyter Notebook files
+*.ipynb
+
+# Ignore the hidden checkpoint folders created by Jupyter
+.ipynb_checkpoints/
+*.pyc
