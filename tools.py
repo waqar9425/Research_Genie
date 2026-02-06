@@ -112,7 +112,7 @@ def build_index_node(state: GraphState):
     vectorstore = FAISS.from_texts(
         texts=chunks, embedding=embeddings_model, metadatas=metas
     )
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 1})
     print(f"[INFO] FAISS index built with {len(chunks)} chunks")
 
     return {"index": vectorstore, "retriever": retriever}
@@ -122,12 +122,12 @@ def build_index_node(state: GraphState):
 def retriever_node(state: GraphState):
     retr = state.get("retriever")
     if retr is None:
+        print("[ERROR] Retriever is missing! State keys:", list(state.keys()))
         return {"docs": []}
+    #docs = retr.get_relevant_documents(state["query"])
+    docs = retr.invoke(state["query"])
 
-    query = state.get("rewritten_query", state["query"])
-    docs = retr.get_relevant_documents(query)
-
-    print(f"[INFO] Retrieved {len(docs)} chunks using query: {query}")
+    print(f"[INFO] Retrieved {len(docs)} chunks")
     return {"docs": [d.page_content for d in docs]}
 
 
@@ -146,75 +146,101 @@ def no_docs_node(state: GraphState) -> dict:
 def generator_node(state: GraphState):
     docs = state.get("docs", [])
     q = state["query"]
+
     if not docs:
-        return {"answer": "Sorry, I couldn't find relevant documents."}
+        return {"draft_answer": ""}
 
     context = "\n\n".join(docs)
-    prompt = f"""You are a helpful assistant.
-Question: {q}
 
-Help me answer using only the context below:
-
-{context}
-
-Answer:"""
-
-    resp = llm.invoke(prompt)
-    return {"answer": resp.content}
-
-
-#from langchain.prompts import ChatPromptTemplate
-
-EVAL_PROMPT = ChatPromptTemplate.from_template("""
-You are evaluating an AI answer.
+    prompt = f"""
+You are an expert research assistant.
 
 Question:
-{question}
+{q}
+
+Answer using ONLY the context below.
+Do not hallucinate.
+
+Context:
+{context}
+
+Draft Answer:
+"""
+
+    resp = llm.invoke(prompt)
+    return {"draft_answer": resp.content}
+
+
+def evaluation_node(state: GraphState) -> dict:
+    context = "\n\n".join(state["docs"])
+
+    prompt = f"""
+You are a strict reviewer.
+
+Question:
+{state['query']}
 
 Context:
 {context}
 
 Answer:
-{answer}
+{state['draft_answer']}
 
-Evaluate if the answer is:
-1. Grounded in the context
-2. Non-empty
-3. Helpful
+Evaluate the answer for:
+1. Grounding in context
+2. Completeness
+3. Clarity
 
-Reply ONLY with one word:
-PASS or FAIL
-""")
+Reply in this format:
 
-def evaluation_node(state: GraphState) -> dict:
-    context = "\n\n".join(state["docs"])
-    prompt = EVAL_PROMPT.format(
-        question=state["query"],
-        context=context,
-        answer=state["answer"]
-    )
+PASS
+or
+FAIL: <short explanation of what is wrong or missing>
+"""
 
-    result = llm.invoke(prompt).content.strip().upper()
-    return {"eval_result": result}
+    critique = llm.invoke(prompt).content.strip()
 
+    return {
+        "critique": critique
+    }
 
 
 
 def route_after_evaluation(state: GraphState) -> str:
-    if state["eval_result"] == "PASS":
+    critique = state["critique"]
+
+    if critique.startswith("PASS"):
         return "end"
 
     if state["retry_count"] < state["max_retries"]:
         return "retry"
 
-    return "no_docs"
+    return "end"
 
 def retry_node(state: GraphState) -> dict:
     retries = state.get("retry_count", 0) + 1
-    print(f"[WARN] Retry attempt {retries}")
+    print(f"[WARN] Improving answer (attempt {retries})")
+
+    prompt = f"""
+Improve the answer based on reviewer feedback.
+
+Question:
+{state['query']}
+
+Previous Answer:
+{state['draft_answer']}
+
+Critique:
+{state['critique']}
+
+Improved Answer:
+"""
+
+    improved = llm.invoke(prompt).content
 
     return {
-        "retry_count": retries,
-        "rewritten_query": ""  # force rewrite again
+        "draft_answer": improved,
+        "retry_count": retries
     }
+
 

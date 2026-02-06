@@ -41,7 +41,7 @@ graph = build_graph()
 # response = graph.invoke({"query": "explain attention in large language model?"})
 # print("Answer:", response["answer"])
 response = graph.invoke({
-    "query": "explain attention in large language model?",
+    "query": "explain role of layer normalization in large language model?",
     "chat_history": [
         "User asked about transformers earlier",
         "Assistant explained self-attention briefly"
