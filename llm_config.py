@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Load .env file
 load_dotenv()
 # Access environment variables
-openai_key = os.getenv("OPENAI_API_KEY")
+#openai_key = os.getenv("OPENAI_API_KEY")
 google_api_key = os.getenv("GEMINI_API_KEY")
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
