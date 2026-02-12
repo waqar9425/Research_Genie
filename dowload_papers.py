@@ -8,19 +8,12 @@ import feedparser
 import time
 import re
 import requests
-import pdfplumber
-import faiss
-import numpy as np
 from tqdm import tqdm
 
-from typing import TypedDict, List
 
 # LangGraph & LangChain components
-from langgraph.graph import StateGraph, END
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_ollama import ChatOllama
+#from langchain_community.embeddings import HuggingFaceEmbeddings
+#from langchain_ollama import ChatOllama
 
 # 2. Global Config
 DATA_DIR = "./data"

@@ -1,16 +1,24 @@
 from typing import TypedDict, List, Dict
-import faiss
 
 class GraphState(TypedDict, total=False):
-    # existing
     query: str
     rewritten_query: str
+
+    chat_history: List[Dict[str, str]]
+
+    papers: List[Dict]
+    pdf_texts: List[str]
+    chunks: List[str]
+    metadata: List[Dict]
+
+    index: any
+    retriever: any
     docs: List[str]
 
-    # agent outputs
     draft_answer: str
-    critique: str
     final_answer: str
+    critique: str
 
     retry_count: int
     max_retries: int
+

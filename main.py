@@ -1,53 +1,54 @@
-from langchain_huggingface import HuggingFaceEmbeddings
-# 1. Imports
-import os
-import json
-import feedparser
-import time
-import re
-import requests
-import pdfplumber
-import faiss
-import numpy as np
-from tqdm import tqdm
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import List, Dict
+import traceback
 
-from typing import TypedDict, List
+app = FastAPI()
 
-# LangGraph & LangChain components
-from langgraph.graph import StateGraph, END
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_ollama import ChatOllama
+graph = None  # lazy init
 
-from dowload_papers import *
-# 2. Global Config
-DATA_DIR = "./data"
-PDF_DIR = os.path.join(DATA_DIR, "papers")
-META_DIR = os.path.join(DATA_DIR, "metadata")
-os.makedirs(PDF_DIR, exist_ok=True)
-os.makedirs(META_DIR, exist_ok=True)
+class ChatRequest(BaseModel):
+    query: str
+    chat_history: List[Dict[str, str]] = []
+    retry_count: int = 0
+    max_retries: int = 2
 
-import os
+@app.on_event("startup")
+def load_graph():
+    global graph
+    try:
+        from graph import build_graph
+        graph = build_graph()
+        print("✅ LangGraph loaded successfully")
+    except Exception:
+        print("❌ Failed to load LangGraph")
+        traceback.print_exc()
+        graph = None
 
+@app.get("/")
+def root():
+    return {
+        "status": "running",
+        "graph_loaded": graph is not None
+    }
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-from tools import *
+@app.post("/chat")
+def chat(req: ChatRequest):
+    if graph is None:
+        return {"error": "Graph not loaded"}
 
-from graph import build_graph
+    result = graph.invoke({
+        "query": req.query,
+        "chat_history": req.chat_history,
+        "retry_count": req.retry_count,
+        "max_retries": req.max_retries
+    })
 
-graph = build_graph()
-
-# response = graph.invoke({"query": "explain attention in large language model?"})
-# print("Answer:", response["answer"])
-response = graph.invoke({
-    "query": "explain role of layer normalization in large language model?",
-    "chat_history": [
-        "User asked about transformers earlier",
-        "Assistant explained self-attention briefly"
-    ],
-    "retry_count": 0,
-    "max_retries": 2
-})
-
-print("Answer:", response["answer"])
+    return {
+  "answer": result.get("draft_answer", ""),
+  "eval": result.get("critique")
+}

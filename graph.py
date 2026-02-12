@@ -19,6 +19,8 @@ def build_graph():
     workflow.add_node("improve_agent", retry_node)
 
     workflow.add_node("no_docs", no_docs_node)
+    workflow.add_node("update_chat", update_chat_history_node)
+
 
     # --- Entry ---
     workflow.set_entry_point("fetch_papers")
@@ -42,14 +44,18 @@ def build_graph():
     # --- Step-2 reflection loop ---
     workflow.add_edge("answer_agent", "critic_agent")
 
+   
     workflow.add_conditional_edges(
-        "critic_agent",
-        route_after_evaluation,
-        {
-            "end": END,
-            "retry": "improve_agent"
-        }
-    )
+    "critic_agent",
+    route_after_evaluation,
+    {
+        "end": "update_chat",
+        "retry": "improve_agent"
+    }
+)
+
+    workflow.add_edge("update_chat", END)
+
 
     workflow.add_edge("improve_agent", "answer_agent")
 

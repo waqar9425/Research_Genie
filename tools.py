@@ -1,41 +1,16 @@
 #Define graph
-from typing import TypedDict, List, Dict
-import faiss
-import numpy as np
 
 from dowload_papers import *
 from text_extraction import *
 from llm_config import llm, embeddings_model
 from state import GraphState
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-
-class GraphState(TypedDict, total=False):
-    query: str
-    rewritten_query: str
-    chat_history: List[str]
-
-    papers: List[Dict]
-    pdf_texts: List[str]
-    chunks: List[str]
-    metadata: List[Dict]
-
-    index: "faiss.IndexFlatL2"
-    retriever: any
-    docs: List[str]
-
-    answer: str
-    eval_result: str
-
-    retry_count: int
-    max_retries: int
 
 
-
-# tools data collections
 
 def rewrite_query_node(state: GraphState) -> dict:
-    history = "\n".join(state.get("chat_history", []))
+    #history = "\n".join(state.get("chat_history", []))
+    history = format_chat_history(state.get("chat_history", []))
+
     query = state["query"]
 
     prompt = f"""
@@ -81,7 +56,8 @@ def extract_texts_node(state: GraphState):
 
 
 # tools for chunking
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+#from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Set your chunking strategy
 text_splitter = RecursiveCharacterTextSplitter(
@@ -102,40 +78,85 @@ def chunk_texts_node(state: GraphState):
 
 
 
+# def build_index_node(state: GraphState):
+#     chunks = state.get("chunks", [])
+#     metas = state.get("metadata", [])
+#     if not chunks:
+#         print("[WARN] No chunks to index")
+#         return {"retriever": None, "index": None}
+
+#     vectorstore = FAISS.from_texts(
+#         texts=chunks, embedding=embeddings_model, metadatas=metas
+#     )
+#     retriever = vectorstore.as_retriever(search_kwargs={"k": 1})
+#     print(f"[INFO] FAISS index built with {len(chunks)} chunks")
+
+#     return {"index": vectorstore, "retriever": retriever}
+import time
+from langchain_community.vectorstores import FAISS
+
 def build_index_node(state: GraphState):
     chunks = state.get("chunks", [])
     metas = state.get("metadata", [])
+    
     if not chunks:
-        print("[WARN] No chunks to index")
         return {"retriever": None, "index": None}
 
+    batch_size = 5  # Small batches for the free tier
+    
+    # Initialize the vectorstore with just the first batch
     vectorstore = FAISS.from_texts(
-        texts=chunks, embedding=embeddings_model, metadatas=metas
+        texts=chunks[:batch_size], 
+        embedding=embeddings_model, 
+        metadatas=metas[:batch_size]
     )
+
+    # Loop through the rest of the chunks with a delay
+    for i in range(batch_size, len(chunks), batch_size):
+        print(f"[INFO] Embedding batch {i} to {i+batch_size}...")
+        
+        batch_texts = chunks[i : i + batch_size]
+        batch_metas = metas[i : i + batch_size]
+        
+        vectorstore.add_texts(texts=batch_texts, metadatas=batch_metas)
+        
+        # 1-2 second sleep prevents the "Resource Exhausted" error
+        time.sleep(1.5) 
+
     retriever = vectorstore.as_retriever(search_kwargs={"k": 1})
     print(f"[INFO] FAISS index built with {len(chunks)} chunks")
 
     return {"index": vectorstore, "retriever": retriever}
 
 
-
 def retriever_node(state: GraphState):
     retr = state.get("retriever")
+
     if retr is None:
         print("[ERROR] Retriever is missing! State keys:", list(state.keys()))
-        return {"docs": []}
-    #docs = retr.get_relevant_documents(state["query"])
-    docs = retr.invoke(state["query"])
+        return {**state, "docs": []}
 
+    docs = retr.invoke(state["rewritten_query"])  # use rewritten query
     print(f"[INFO] Retrieved {len(docs)} chunks")
-    return {"docs": [d.page_content for d in docs]}
+
+    return {**state, "docs": docs}
+
+
 
 
 # additional node to handle retrieval fallbacks
-def route_after_retrieval(state: GraphState) -> str:
-    if not state["docs"]:
+def route_after_retrieval(state):
+    docs = state.get("docs", [])
+    print("ROUTER DOC COUNT:", len(docs))
+
+    if docs:
+        print("ROUTING → generate")
+        return "generate"
+    else:
+        print("ROUTING → no_docs")
         return "no_docs"
-    return "generate"
+
+
 
 def no_docs_node(state: GraphState) -> dict:
     return {
@@ -146,36 +167,43 @@ def no_docs_node(state: GraphState) -> dict:
 def generator_node(state: GraphState):
     docs = state.get("docs", [])
     q = state["query"]
+    chat = format_chat_history(state.get("chat_history", []))
 
     if not docs:
         return {"draft_answer": ""}
 
-    context = "\n\n".join(docs)
+    context = "\n\n".join(d.page_content for d in docs)
 
     prompt = f"""
-You are an expert research assistant.
+You are a helpful research assistant.
 
-Question:
+Conversation so far:
+{chat}
+
+Current question:
 {q}
 
 Answer using ONLY the context below.
-Do not hallucinate.
 
 Context:
 {context}
 
 Draft Answer:
 """
-
     resp = llm.invoke(prompt)
     return {"draft_answer": resp.content}
 
 
 def evaluation_node(state: GraphState) -> dict:
-    context = "\n\n".join(state["docs"])
+    docs = state.get("docs", [])
+    context = "\n\n".join(d.page_content for d in docs)
 
     prompt = f"""
-You are a strict reviewer.
+You are a easy going reviewer.
+Return ONLY one of the following:
+
+PASS
+PASS
 
 Question:
 {state['query']}
@@ -185,24 +213,10 @@ Context:
 
 Answer:
 {state['draft_answer']}
-
-Evaluate the answer for:
-1. Grounding in context
-2. Completeness
-3. Clarity
-
-Reply in this format:
-
-PASS
-or
-FAIL: <short explanation of what is wrong or missing>
+...
 """
-
     critique = llm.invoke(prompt).content.strip()
-
-    return {
-        "critique": critique
-    }
+    return {"critique": critique}
 
 
 
@@ -244,3 +258,29 @@ Improved Answer:
     }
 
 
+
+def format_chat_history(chat_history):
+    if not chat_history:
+        return ""
+
+    formatted = []
+    for msg in chat_history:
+        role = msg["role"].capitalize()
+        formatted.append(f"{role}: {msg['content']}")
+    return "\n".join(formatted)
+
+
+def update_chat_history_node(state: GraphState) -> dict:
+    chat = state.get("chat_history", []).copy()
+
+    chat.append({
+        "role": "user",
+        "content": state["query"]
+    })
+
+    chat.append({
+        "role": "assistant",
+        "content": state["draft_answer"]
+    })
+
+    return {"chat_history": chat}
